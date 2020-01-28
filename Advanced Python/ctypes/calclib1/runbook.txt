@@ -1,0 +1,58 @@
+import ctypes
+
+# Load the shared library into c types.
+libc = ctypes.CDLL("./libclib1.so")         # change into appropriate folder
+-----------------------------------------------------
+Calling Simple Functions with ctypes:
+==================================
+counter = libc.simple_function()
+--------------------------------------------------------
+Dealing with Mutable and Immutable Strings as ctypes Parameters:
+================================================================
+print("Calling C function which tries to modify Python string")
+original_string = "starting string"
+print("Before:", original_string)
+
+# This call changes value
+libc.add_one_to_string(original_string)
+
+print("After: ", original_string)
+--------------------------------------------------------------------
+# The ctypes string buffer IS mutable, however.
+print("Calling C function with mutable buffer this time")
+
+# Need to encode the original to get bytes for string_buffer
+mutable_string = ctypes.create_string_buffer(str.encode(original_string))
+
+print("Before:", mutable_string.value)
+libc.add_one_to_string(mutable_string)  # Works!
+print("After: ", mutable_string.value)
+----------------------------------------------------------------------
+
+Note that the string_buffer is printed as a byte array on the Python side.
+-----------------------------------------------------------------------
+Specifying Function Signatures in ctypes:
+=========================================
+alloc_func = libc.alloc_C_string
+
+# This is a ctypes.POINTER object which holds the address of the data
+alloc_func.restype = ctypes.POINTER(ctypes.c_char)
+
+print("Allocating and freeing memory in C")
+c_string_address = alloc_func()
+
+# Wow we have the POINTER object.
+# We should convert that to something we can use
+# on the Python side
+phrase = ctypes.c_char_p.from_buffer(c_string_address)
+
+print("Bytes in Python {0}".format(phrase.value))
+------------------------------------------------------------------------
+Once we’ve used the data we allocated in C, we need to free it.
+The process is quite similar, specifying the argtypes attribute instead of restype:
+
+free_func = libc.free_C_string
+free_func.argtypes = [ctypes.POINTER(ctypes.c_char), ]
+free_func(c_string_address)
+--------------------------------------------------------------------------
+
